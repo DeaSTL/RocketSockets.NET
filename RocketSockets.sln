@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.539
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketServerTest", "ChatReallyGoodServer\SocketServerTest.csproj", "{C33F0530-D979-493E-A0C6-79CC40C6E8CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketServerTest", "RocketSockets.NET\SocketServerTest.csproj", "{C33F0530-D979-493E-A0C6-79CC40C6E8CA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketClientTest", "SocketClientTest\SocketClientTest.csproj", "{79CC403B-7BC4-4DDD-85DD-8195A0451E78}"
 EndProject
