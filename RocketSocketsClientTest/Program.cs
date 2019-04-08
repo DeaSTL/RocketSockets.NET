@@ -14,10 +14,16 @@ namespace RocketSocketsClientTest
                 
                 client.Emit("fuck", "message1");
                 Console.WriteLine(client.GetID());
+
                 
+            });
+            client.Listen("shit", (data) =>{
+                Console.WriteLine(data);
+
             });
 
             client.StartAsync().Wait();
+            Console.ReadLine();
            
         }
     }

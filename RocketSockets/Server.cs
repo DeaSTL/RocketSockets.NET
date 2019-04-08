@@ -37,26 +37,30 @@ namespace RocketSockets{
 
 
     }
-    public class ServerSocket
-    {
+    
+    
+    public class ServerSocket{
         public string id;
         private Server server;
         private TcpClient client;
+        public String ip;
         private NetworkStream networkStream;
-        private Dictionary<string, Action<string,Object>> callbacks;
+        private Dictionary<string, Action<string,ServerSocket>> callbacks;
         private Dictionary<string, Object> meta;
-        public ServerSocket(TcpClient _client, Server _server, Dictionary<string, Action<string,Object>> _callbacks){
+        public ServerSocket(
+            TcpClient _client,
+            Server _server,
+            Dictionary<string, Action<string, ServerSocket>> _callbacks){
+
             callbacks = _callbacks;
             
-
             //Generates and ID for socket indexing
             id = Utils.GenerateID(32);
             
-            this.server = _server;
-            this.client = _client;
-
-            meta["id"] = id;
-            meta["ip"] = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+            server = _server;
+            client = _client;
+            
+            ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
             //Listens for messages and will later respond to events and handle events
             GetNetworkStream();
             ListenForMessages();
@@ -118,8 +122,8 @@ namespace RocketSockets{
                 String[] client_message_split = message.Split((char)0x1);
                 String client_event = client_message_split[0];
                 String client_message = client_message_split[1];
-                Console.WriteLine(client_message);
-                callbacks[client_event](client_message,meta);
+                
+                callbacks[client_event](client_message,this);
 
             }
 
@@ -135,17 +139,17 @@ namespace RocketSockets{
 
     }
     public class Server{
-        public List<ServerSocket> sockets;
+        public Dictionary<string,ServerSocket> sockets;
         private TcpListener server;
         private String ip;
         private int port;
         public bool isRunnning = false;
-        private Dictionary<string, Action<string,Object>> callbacks;
+        private Dictionary<string, Action<string,ServerSocket>> callbacks;
         public Server(String ip,int port){
             this.ip = ip;
             this.port = port;
-            callbacks = new Dictionary<string, Action<string,Object>>();
-            sockets = new List<ServerSocket>();
+            callbacks = new Dictionary<string, Action<string,ServerSocket>>();
+            sockets = new Dictionary<string, ServerSocket>();
             server = new TcpListener(IPAddress.Parse(this.ip),port);
             
         }
@@ -158,12 +162,16 @@ namespace RocketSockets{
             ServerSocket socket = new ServerSocket(client,this,callbacks);
             socket.Emit(Events.ClientID, socket.id);
             socket.Emit(Events.ClientConnected, "connected");
-            
+
 
             //adds the newely created socket to the list of sockets so that we can later index the socket
-            sockets.Add(socket);
+            sockets[socket.id] = socket;
 
         }
+        //---------------------------------
+        //public methods
+        //---------------------------------
+
         /*
          * Creates a async main loop for the server
          * client listener
@@ -181,8 +189,8 @@ namespace RocketSockets{
          * to the server. 
          * This event listener will have a Action<string> callback 
          */
-        public void Listen(String _event,Action<String,Object> _callback) {
-            Console.WriteLine(sockets.Count);
+        public void Listen(String _event,Action<String,ServerSocket> _callback) {
+            
             callbacks[_event] = _callback;
         }
         /*
@@ -190,10 +198,14 @@ namespace RocketSockets{
          */
         public void Emit(String _event, String _message) {
 
-            foreach (var socket in sockets)
+            foreach (var socket in sockets.Keys)
             {
-                socket.Emit(_event, _message);
+                sockets[socket].Emit(_event, _message);
             }
-        }  
+        }
+        public ServerSocket GetClient(String _id) {
+            return sockets[_id];
+        }
+        
     }
 }
