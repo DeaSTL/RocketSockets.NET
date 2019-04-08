@@ -11,7 +11,7 @@ using RocketSockets.SocketEvents;
 namespace RocketSocketsClientTest{
     class Program{
         static void Main(string[] args){
-            Client client = new Client("localhost",5000);
+            Client client = new Client("127.0.0.1",5000);
             client.Listen(Events.ClientConnected, (data) =>{
                 
                 client.Emit("hello", "message");
@@ -37,7 +37,7 @@ namespace RocketSocketsServerTest{
     class Program{
         static void Main(string[] args){
             
-            Server server = new Server("localhost", 5000);
+            Server server = new Server("127.0.0.1", 5000);
             
             Console.WriteLine("Server is Running....");
             
