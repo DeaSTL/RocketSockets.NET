@@ -24,9 +24,17 @@ namespace RocketSockets{
         //private methods
         //---------------------------------------
 
-        private void GetNetworkStream(){
+        /*
+         * Gets the network stream from the current TcpClient object
+         */
+        private void GetNetworkStream()
+        {
             network_stream = client.GetStream();
         }
+        /*
+         * listens for messages and processes the event listener
+         * from the callbacks dictionary
+         */
         private async Task ListenForMessages(){
             byte[] bytes = new byte[0x4000];
             await network_stream.ReadAsync(bytes, 0, 0x4000);
@@ -45,6 +53,9 @@ namespace RocketSockets{
 
             Console.WriteLine(message);
         }
+        /*
+         * method for sending raw message data
+         */
         private async Task SendMessage(String message){
             byte[] bytes = new byte[0x4000];
             for (int i = 0; i < message.Length; i++)
@@ -69,13 +80,19 @@ namespace RocketSockets{
 
         }
 
-
+        /*
+         * Emits a message to the client with the event string 
+         * attached via a unalphanumeric character 0x1
+         */
         public void Emit(String _event, String _message)
         {
-            SendMessage("message");
+            SendMessage(_event + (char)0x1 + _message);
 
 
         }
+        /*
+         * Creates a event for any payload that is sent from the server
+         */
         public void Listen(String _event, Action<string> callback)
         {
             callbacks.Add(_event, callback);
@@ -99,12 +116,23 @@ namespace RocketSockets{
             
 
         }
+        /*
+         * Creates a event for any payload that is sent from the server
+         */
         public void Listen(String _event,Action<String> _callback) {
             socket.Listen(_event, _callback);
         }
+        /*
+         * Emits a message to the client with the event string 
+         * attached via a unalphanumeric character 0x1
+         */
         public void Emit(String _event,String _message) {
             socket.Emit(_event, _message);
         }
+        /*
+         * starts by connecting and then triggers the message 
+         * listening subroutine
+         */
         public async Task StartAsync() {
             await socket.StartAsync();
         }
