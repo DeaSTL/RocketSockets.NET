@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using RocketSockets.SocketEvents;
 
 
 namespace RocketSockets{
+
     public class Utils{
         /*
          * Generates a id stream containing all 
@@ -41,13 +43,20 @@ namespace RocketSockets{
         private Server server;
         private TcpClient client;
         private NetworkStream networkStream;
-        private Dictionary<string, Action<string>> callbacks;
-        public ServerSocket(TcpClient client, Server server)
-        {
+        private Dictionary<string, Action<string,Object>> callbacks;
+        private Dictionary<string, Object> meta;
+        public ServerSocket(TcpClient _client, Server _server, Dictionary<string, Action<string,Object>> _callbacks){
+            callbacks = _callbacks;
+            
+
             //Generates and ID for socket indexing
             id = Utils.GenerateID(32);
-            this.server = server;
-            this.client = client;
+            
+            this.server = _server;
+            this.client = _client;
+
+            meta["id"] = id;
+            meta["ip"] = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
             //Listens for messages and will later respond to events and handle events
             GetNetworkStream();
             ListenForMessages();
@@ -83,13 +92,11 @@ namespace RocketSockets{
          * listens for messages and processes the event listener
          * from the callbacks dictionary
          */
-        private async Task ListenForMessages()
-        {
+        private async Task ListenForMessages(){
             //TODO: create a while loop for continuous reading from the buffer.
             //TODO: create event lookup and event handler
             //Creates the network stream to allow for back and forth communication
-            while (true)
-            {
+            while (true){
 
                 byte[] bytes = new byte[16384];
 
@@ -97,8 +104,7 @@ namespace RocketSockets{
                 await networkStream.ReadAsync(bytes, 0, 16384);
                 string message = "";
                 int iter = 0;
-                while (true)
-                {
+                while (true){
                     //Checks for the character 0x0 and then stops reading from the buffer
                     if (bytes[iter] == 0)
                     {
@@ -112,8 +118,8 @@ namespace RocketSockets{
                 String[] client_message_split = message.Split((char)0x1);
                 String client_event = client_message_split[0];
                 String client_message = client_message_split[1];
-                Console.WriteLine(client_event);
                 Console.WriteLine(client_message);
+                callbacks[client_event](client_message,meta);
 
             }
 
@@ -126,16 +132,7 @@ namespace RocketSockets{
             //Sends the message with the event and message concatenated together
             SendMessage(_event + (char)0x1 + _message);
         }
-        /*
-         * Creates a new event listener for any client that emits
-         * to the server. 
-         * This event listener will have a Action<string> callback 
-         */
-        public void Listen(String _event,Action<String> _callback) {
-            //Adds a callback to the callback dictionary so that it can be indexed by the event string
-            callbacks.Add(_event, _callback);
 
-        }
     }
     public class Server{
         public List<ServerSocket> sockets;
@@ -143,12 +140,14 @@ namespace RocketSockets{
         private String ip;
         private int port;
         public bool isRunnning = false;
+        private Dictionary<string, Action<string,Object>> callbacks;
         public Server(String ip,int port){
             this.ip = ip;
             this.port = port;
+            callbacks = new Dictionary<string, Action<string,Object>>();
             sockets = new List<ServerSocket>();
             server = new TcpListener(IPAddress.Parse(this.ip),port);
-            server.Start();
+            
         }
         /*
          * waits for clients to connect to the server and 
@@ -156,8 +155,11 @@ namespace RocketSockets{
          */
         private async Task ListenForClientsAsync(){
             TcpClient client = await server.AcceptTcpClientAsync();
-            ServerSocket socket = new ServerSocket(client,this);
+            ServerSocket socket = new ServerSocket(client,this,callbacks);
+            socket.Emit(Events.ClientID, socket.id);
+            socket.Emit(Events.ClientConnected, "connected");
             
+
             //adds the newely created socket to the list of sockets so that we can later index the socket
             sockets.Add(socket);
 
@@ -167,13 +169,31 @@ namespace RocketSockets{
          * client listener
          */
         public async Task StartAsync(){
+            server.Start();
             isRunnning = true;
             while (isRunnning){
                 await ListenForClientsAsync();
 
             }
         }
-        
-        
+        /*
+         * Creates a new event listener for any client that emits
+         * to the server. 
+         * This event listener will have a Action<string> callback 
+         */
+        public void Listen(String _event,Action<String,Object> _callback) {
+            Console.WriteLine(sockets.Count);
+            callbacks[_event] = _callback;
+        }
+        /*
+         * Sends a event to all clients connected to the server
+         */
+        public void Emit(String _event, String _message) {
+
+            foreach (var socket in sockets)
+            {
+                socket.Emit(_event, _message);
+            }
+        }  
     }
 }

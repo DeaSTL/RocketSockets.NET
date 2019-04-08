@@ -11,9 +11,12 @@ namespace RocketSocketsClientTest
         {
             Client client = new Client("localhost",5000);
             client.Listen(Events.ClientConnected, (data) =>{
-                Console.WriteLine(data);
+                
+                client.Emit("fuck", "message1");
+                Console.WriteLine(client.GetID());
                 
             });
+
             client.StartAsync().Wait();
            
         }

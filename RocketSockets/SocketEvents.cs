@@ -8,6 +8,7 @@ namespace RocketSockets.SocketEvents
         public static String ClientConnected = "ClientConnected";
         public static String ClientDisconnected = "ClientDisconnected";
         public static String ClientTimeout = "ClientTimeout";
+        public static String ClientID = "clientID";
        
 
 
