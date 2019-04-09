@@ -1,6 +1,10 @@
 # RocketSockets.NET
 A fast, easy, real-time, socket library.
 
+# Mission Statement
+This is library is alternative to other socket libraries
+
+
 ## Client
 ```csharp
 using System;
@@ -53,3 +57,16 @@ namespace RocketSocketsServerTest{
 }
 
 ```
+## Planned Features
+- Rooms
+    - Room joining
+    - Room combination
+- Variable buffer lengths
+- Javascript server and client support
+- Java server and client support
+- C++ server and client support
+- Python server and client support
+- All versions will be compatible with each other's servers and clients
+
+
+
