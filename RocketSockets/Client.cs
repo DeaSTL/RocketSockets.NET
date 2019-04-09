@@ -23,7 +23,7 @@ namespace RocketSockets{
         }
 
         //TODO: Send Length packet first and then send the message payload for dynamic buffer sizes
-        //TODO: Create emit and event listeners
+
 
         //---------------------------------------
         //private methods
@@ -36,38 +36,69 @@ namespace RocketSockets{
             network_stream = client.GetStream();
         }
         /*
-         * listens for messages and processes the event listener
+         * Listens for messages and processes the event listener
          * from the callbacks dictionary
          */
         private async Task ListenForMessages(){
-            byte[] bytes = new byte[0x4000];
-            await network_stream.ReadAsync(bytes, 0, 0x4000);
-            string message = "";
-            int iter = 0;
-            //Creates a string without all the null characters
             while (true){
-                if (bytes[iter] == 0){
-                    break;
+
+                byte[] bytes = new byte[0x2];
+                //Receives the message length
+                await network_stream.ReadAsync(bytes, 0, 0x2);
+                int message_length = (bytes[0] + (bytes[1] << 8));
+                bytes = new byte[] { 0x1 };
+                //Sends okay signal
+                await network_stream.WriteAsync(bytes, 0, 0x2);
+                bytes = new byte[message_length];
+                //Receives the message payload
+                await network_stream.ReadAsync(bytes, 0, message_length);
+
+                string message = "";
+                int iter = 0;
+                //Creates a string without all the null characters
+                while (true)
+                {
+                    if (bytes[iter] == 0)
+                    {
+                        break;
+                    }
+                    message += (char)bytes[iter];
+                    iter++;
                 }
-                message += (char)bytes[iter];
-                iter++;
+                String[] server_message_split = message.Split((char)0x1);
+                String server_event = server_message_split[0];
+                String server_message = server_message_split[1];
+                callbacks[server_event](server_message);
             }
-            String[] server_message_split = message.Split((char)0x1);
-            String server_event = server_message_split[0];
-            String server_message = server_message_split[1];
-            callbacks[server_event](server_message);
         }
         /*
-         * method for sending raw message data
+         * Method for sending raw message data
          */
-        private async Task SendMessage(String message){
-            byte[] bytes = new byte[0x4000];
-            for (int i = 0; i < message.Length; i++){
+        private async Task SendMessage(String _message){
+            byte[] bytes = new byte[0x2];
+            //converts the 16 bit message length to two bytes
+            bytes[0] = (byte)(_message.Length & 0xff);
+            bytes[1] = (byte)(_message.Length & 0xff00 >> 8);
 
-                bytes[i] = (byte)message.Substring(i).ToCharArray()[0];
+            
+            /*
+             * Sends one request to send the message length and
+             * then receives a okay signal from the receiver
+             * after all this, it will then send the message
+             */
+            await network_stream.WriteAsync(bytes, 0, 0x2);
+            await network_stream.ReadAsync(bytes, 0, 0x2);
+            if (bytes[0] == 1) {
+                bytes = new byte[_message.Length];
+                for (int i = 0; i < _message.Length; i++)
+                {
+
+                    bytes[i] = (byte)_message.Substring(i).ToCharArray()[0];
+                }
+                await network_stream.WriteAsync(bytes, 0, _message.Length);
+
+
             }
-
-            await network_stream.WriteAsync(bytes, 0, 0x4000);
         }
 
         //---------------------------------------
@@ -105,9 +136,7 @@ namespace RocketSockets{
         private string host;
         private int port;
         private ClientSocket socket;
-        
-
-
+       
         public Client(string _host,int _port){
             host = _host;
             port = _port;
@@ -136,7 +165,7 @@ namespace RocketSockets{
             socket.Emit(_event, _message);
         }
         /*
-         * starts by connecting and then triggers the message 
+         * Starts by connecting and then triggers the message 
          * listening subroutine
          */
         public async Task StartAsync() {

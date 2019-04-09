@@ -1,21 +1,17 @@
 ﻿using System;
 using RocketSockets;
 
-namespace RocketSocketsServerTest
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
+namespace RocketSocketsServerTest{
+    class Program{
+        static void Main(string[] args){
             
-            Server server = new Server("0.0.0.0", 5000);
+            Server server = new Server("127.0.0.1", 5000);
             
             Console.WriteLine("Server is Running....");
-            server.Listen("fuck", (data,socket) =>
-            {
+            server.Listen("hello", (data,socket) =>{
                 Console.WriteLine(data);
-                Console.WriteLine(socket.id);
-                socket.Emit("shit",socket.ip);
+                
+                socket.Emit("hello",socket.ip);
 
             });
             server.StartAsync().Wait();
