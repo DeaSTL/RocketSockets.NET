@@ -8,7 +8,7 @@ namespace RocketSocketsServerTest{
             Server server = new Server("127.0.0.1", 5000);
             
             Console.WriteLine("Server is Running....");
-            server.Listen("hello", (data,socket) =>{
+            server.Listen("server", (data,socket) =>{
                 Console.WriteLine(data);
                 
                 socket.Emit("hello",socket.ip);

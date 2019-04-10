@@ -44,7 +44,7 @@ namespace RocketSockets{
         private Server server;
         private TcpClient client;
         public String ip;
-        private NetworkStream networkStream;
+        private NetworkStream network_stream;
         private Dictionary<string, Action<string,ServerSocket>> callbacks;
         private Dictionary<string, Object> meta;
         public ServerSocket(
@@ -72,7 +72,7 @@ namespace RocketSockets{
          */
         private void GetNetworkStream()
         {
-            networkStream = client.GetStream();
+            network_stream = client.GetStream();
 
         }
         /*
@@ -80,15 +80,33 @@ namespace RocketSockets{
          */
          //TODO: make buffer sizes variable
         private async Task SendMessage(String _message) {
-            byte[] bytes = new byte[0x4000];
+            Console.WriteLine(_message);
+            byte[] message_length_bytes = new byte[0x2];
+            //converts the 16 bit message length to two bytes
+            message_length_bytes[0] = (byte)(_message.Length & 0xff);
+            message_length_bytes[1] = (byte)(_message.Length & 0xff00 >> 8);
 
-            for (int i = 0; i < _message.Length; i++) {
-                bytes[i] = (byte)_message.ToCharArray()[i];
+            /*
+             * Sends one request to send the message length and
+             * then receives a okay signal from the receiver
+             * after all this, it will then send the message
+             */
+            await network_stream.WriteAsync(message_length_bytes, 0, 0x2);
+            byte[] okay_signal_bytes = new byte[0x2];
+            await network_stream.ReadAsync(okay_signal_bytes, 0, 0x2);
+            byte[] message_bytes = new byte[_message.Length];
+            if (okay_signal_bytes[0] == 1)
+            {
+                
+                for (int i = 0; i < _message.Length; i++)
+                {
+
+                    message_bytes[i] = (byte)_message[i];
+                }
+                await network_stream.WriteAsync(message_bytes, 0, _message.Length);
+
+
             }
-
-
-
-            await networkStream.WriteAsync(bytes,0,0x4000);
 
 
         }
@@ -102,21 +120,21 @@ namespace RocketSockets{
             //Creates the network stream to allow for back and forth communication
             while (true){
 
-                byte[] bytes = new byte[16384];
+                byte[] message_length_byte = new byte[0x2];
+                //Receives the message length
+                await network_stream.ReadAsync(message_length_byte, 0, 0x2);
+                int message_length = (message_length_byte[0] + (message_length_byte[1] >> 8));
+                byte[] okay_signal_bytes = new byte[] { 0x1, 0x0};
+                //Sends okay signal
+                await network_stream.WriteAsync(okay_signal_bytes, 0, 0x2);
+                byte[] message_bytes = new byte[message_length];
+                //Receives the message payload
+                await network_stream.ReadAsync(message_bytes, 0, message_length);
 
-                //Reads from the current stream
-                await networkStream.ReadAsync(bytes, 0, 16384);
                 string message = "";
-                int iter = 0;
-                while (true){
-                    //Checks for the character 0x0 and then stops reading from the buffer
-                    if (bytes[iter] == 0)
-                    {
-                        break;
-                    }
-                    message += (char)bytes[iter];
-                    iter++;
-
+                for (int i = 0; i < message_length; i++)
+                {
+                    message += (char)message_bytes[i];
                 }
                 //Splits the message receieved by the client by the delimiter 0x1
                 String[] client_message_split = message.Split((char)0x1);

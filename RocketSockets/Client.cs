@@ -40,62 +40,62 @@ namespace RocketSockets{
          * from the callbacks dictionary
          */
         private async Task ListenForMessages(){
-            while (true){
+        
+            byte[] message_length_bytes = new byte[0x2];
+            //Receives the message length
+            await network_stream.ReadAsync(message_length_bytes, 0, 0x2);
+            int message_length = (message_length_bytes[0] + (message_length_bytes[1] >> 8));
+            byte[] okay_signal_bytes = new byte[] { 0x1,0x0};
+            //Sends okay signal
+            await network_stream.WriteAsync(okay_signal_bytes, 0, 0x2);
+            byte[] message_bytes = new byte[message_length];
+            //Receives the message payload
+            await network_stream.ReadAsync(message_bytes, 0, message_length);
 
-                byte[] bytes = new byte[0x2];
-                //Receives the message length
-                await network_stream.ReadAsync(bytes, 0, 0x2);
-                int message_length = (bytes[0] + (bytes[1] << 8));
-                bytes = new byte[] { 0x1 };
-                //Sends okay signal
-                await network_stream.WriteAsync(bytes, 0, 0x2);
-                bytes = new byte[message_length];
-                //Receives the message payload
-                await network_stream.ReadAsync(bytes, 0, message_length);
+            string message = "";
 
-                string message = "";
-                int iter = 0;
-                //Creates a string without all the null characters
-                while (true)
-                {
-                    if (bytes[iter] == 0)
-                    {
-                        break;
-                    }
-                    message += (char)bytes[iter];
-                    iter++;
-                }
-                String[] server_message_split = message.Split((char)0x1);
-                String server_event = server_message_split[0];
-                String server_message = server_message_split[1];
-                callbacks[server_event](server_message);
+            //Creates a string without all the null characters
+
+            for (int i = 0; i < message_length; i++) {
+                message += (char)message_bytes[i];
             }
+            Console.WriteLine(message);
+            String[] server_message_split = message.Split((char)0x1);
+            String server_event = server_message_split[0];
+            String server_message = server_message_split[1];
+            if (callbacks.ContainsKey(server_event)){
+                callbacks[server_event](server_message);
+
+            }
+            
+
         }
         /*
          * Method for sending raw message data
          */
         private async Task SendMessage(String _message){
-            byte[] bytes = new byte[0x2];
+            byte[] message_length_bytes = new byte[0x2];
             //converts the 16 bit message length to two bytes
-            bytes[0] = (byte)(_message.Length & 0xff);
-            bytes[1] = (byte)(_message.Length & 0xff00 >> 8);
+            message_length_bytes[0] = (byte)(_message.Length & 0xff);
+            message_length_bytes[1] = (byte)(_message.Length & 0xff00 >> 8);
 
-            
             /*
              * Sends one request to send the message length and
              * then receives a okay signal from the receiver
              * after all this, it will then send the message
              */
-            await network_stream.WriteAsync(bytes, 0, 0x2);
-            await network_stream.ReadAsync(bytes, 0, 0x2);
-            if (bytes[0] == 1) {
-                bytes = new byte[_message.Length];
+            await network_stream.WriteAsync(message_length_bytes, 0, 0x2);
+            byte[] okay_signal_bytes = new byte[0x2];
+            await network_stream.ReadAsync(okay_signal_bytes, 0, 0x2);
+            byte[] message_bytes = new byte[_message.Length];
+            if (okay_signal_bytes[0] == 1) {
+                
                 for (int i = 0; i < _message.Length; i++)
                 {
 
-                    bytes[i] = (byte)_message.Substring(i).ToCharArray()[0];
+                    message_bytes[i] = (byte)_message[i];
                 }
-                await network_stream.WriteAsync(bytes, 0, _message.Length);
+                await network_stream.WriteAsync(message_bytes, 0, _message.Length);
 
 
             }
