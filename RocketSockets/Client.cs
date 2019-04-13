@@ -35,6 +35,7 @@ namespace RocketSockets{
         private void GetNetworkStream(){
             network_stream = client.GetStream();
         }
+      
         /*
          * Listens for messages and processes the event listener
          * from the callbacks dictionary
@@ -45,9 +46,9 @@ namespace RocketSockets{
             //Receives the message length
             await network_stream.ReadAsync(message_length_bytes, 0, 0x2);
             int message_length = (message_length_bytes[0] + (message_length_bytes[1] >> 8));
-            byte[] okay_signal_bytes = new byte[] { 0x1,0x0};
+            //byte[] okay_signal_bytes = new byte[] { 0x1};
             //Sends okay signal
-            await network_stream.WriteAsync(okay_signal_bytes, 0, 0x2);
+            //await network_stream.WriteAsync(okay_signal_bytes, 0, 0x1);
             byte[] message_bytes = new byte[message_length];
             //Receives the message payload
             await network_stream.ReadAsync(message_bytes, 0, message_length);
@@ -61,12 +62,14 @@ namespace RocketSockets{
             }
             Console.WriteLine(message);
             String[] server_message_split = message.Split((char)0x1);
+            
             String server_event = server_message_split[0];
             String server_message = server_message_split[1];
             if (callbacks.ContainsKey(server_event)){
                 callbacks[server_event](server_message);
 
             }
+            
             
 
         }
@@ -85,20 +88,17 @@ namespace RocketSockets{
              * after all this, it will then send the message
              */
             await network_stream.WriteAsync(message_length_bytes, 0, 0x2);
-            byte[] okay_signal_bytes = new byte[0x2];
-            await network_stream.ReadAsync(okay_signal_bytes, 0, 0x2);
             byte[] message_bytes = new byte[_message.Length];
-            if (okay_signal_bytes[0] == 1) {
-                
-                for (int i = 0; i < _message.Length; i++)
-                {
 
-                    message_bytes[i] = (byte)_message[i];
-                }
-                await network_stream.WriteAsync(message_bytes, 0, _message.Length);
+            for (int i = 0; i < _message.Length; i++)
+            {
 
-
+                message_bytes[i] = (byte)_message[i];
             }
+            await network_stream.WriteAsync(message_bytes, 0, _message.Length);
+
+
+
         }
 
         //---------------------------------------
